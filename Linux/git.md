@@ -66,7 +66,7 @@ Hi litr05! You've successfully authenticated, but GitHub does not provide shell 
 ```
 # работа с GIT репозиторием
 
-
+<img src="git.jpg" alt="me" style="width: 1000px; float: left;"/>
 
 
 - 1.	```git init``` - инициализация(создание) репозитория
