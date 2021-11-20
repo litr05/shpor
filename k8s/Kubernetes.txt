@@ -1,0 +1,332 @@
+#################################  Installing kubeadm, kubelet and kubectl ###########################################
+proxy
+
+apt-get update
+apt-get install -y apt-transport-https ca-certificates curl
+
+curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+
+apt-get update
+apt-get install -y kubelet kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+
+
+################################## ETCD ##########################################
+
+mkdir archives
+cd archives
+export etcdVersion=v3.5.1
+wget https://github.com/coreos/etcd/releases/download/$etcdVersion/etcd-$etcdVersion-linux-amd64.tar.gz
+tar -xvf etcd-$etcdVersion-linux-amd64.tar.gz -C /usr/local/bin/ --strip-components=1
+
+
+groupadd --system etcd
+useradd -s /sbin/nologin --system -g etcd etcd
+
+mkdir -p /var/lib/etcd/
+mkdir /etc/etcd
+chown -R etcd:etcd /var/lib/etcd/
+chmod -R 700 /var/lib/etcd/
+
+INT_NAME="ens32"
+ETCD_HOST_IP=$(ip addr show $INT_NAME | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
+ETCD_NAME=$(hostname -s)
+
+echo $INT_NAME
+echo $ETCD_HOST_IP
+echo $ETCD_NAME
+
+cat <<EOF | tee /etc/systemd/system/etcd.service
+[Unit]
+Description=etcd service
+Documentation=https://github.com/etcd-io/etcd
+
+[Service]
+Type=notify
+User=etcd
+ExecStart=/usr/local/bin/etcd \\
+  --name ${ETCD_NAME} \\
+  --data-dir=/var/lib/etcd \\
+  --listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001 \\
+  --advertise-client-urls http://${ETCD_HOST_IP}:2379 \\
+  --listen-peer-urls http://0.0.0.0:2380 \\
+  --initial-advertise-peer-urls http://${ETCD_HOST_IP}:2380 \\
+  --initial-cluster ${ETCD_NAME}=http://${ETCD_HOST_IP}:2380 \\
+  --initial-cluster-token etcd-0 \\
+  --initial-cluster-state new \
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable etcd
+systemctl start etcd
+systemctl daemon-reload && systemctl restart etcd
+
+etcdctl -w table member list
+curl -sL http://10.40.254.133:2379/metrics | grep etcd_server_is_leader
+
+ENDPOINTS=10.40.254.133:2379,10.40.254.140:2379,10.40.254.149:2379
+ENDPOINTS=192.168.2.11:2379
+etcdctl --endpoints=$ENDPOINTS member list
+etcdctl --write-out=table --endpoints=$ENDPOINTS endpoint status
+etcdctl --write-out=table --endpoints=192.168.2.132:2379 endpoint status
+etcdctl --endpoints=$ENDPOINTS endpoint health
+
+etcdctl move-leader 7a34f6bf27d4be0b
+systemctl stop etcd && rm -fr /var/lib/etcd/member/ && systemctl daemon-reload && systemctl start etcd
+############################################################################
+
+apiVersion: kubeadm.k8s.io/v1beta3
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: abcdef.0123456789abcdef
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 192.168.2.129
+  bindPort: 6443
+nodeRegistration:
+  criSocket: /var/run/containerd/containerd.sock
+  imagePullPolicy: IfNotPresent
+  name: master1
+  taints: null
+---
+apiServer:
+  timeoutForControlPlane: 4m0s
+certSANs:
+  - master1
+  - node1
+  - 192.168.2.129
+  - 192.168.2.130
+  - 127.0.0.1
+apiVersion: kubeadm.k8s.io/v1beta3
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controllerManager: {}
+dns: {}
+etcd:
+  external:
+    endpoints:
+    - http://192.168.2.129:2379
+imageRepository: k8s.gcr.io
+kind: ClusterConfiguration
+kubernetesVersion: 1.22.3
+networking:
+  dnsDomain: domail.local
+  serviceSubnet: 10.96.0.0/12
+  podSubnet: 192.168.0.0/16
+scheduler: {}
+
+
+kubeadm config print init-defaults >> init-defaults.yaml
+kubeadm config print join-defaults >> join-defaults.yaml
+kubeadm config images pull
+
+kubeadm init --config=join-defaults.yaml --ignore-preflight-errors=...
+
+kubeadm init --config=init-defaults.yaml
+kubeadm init --pod-network-cidr=192.168.0.0/16
+
+
+kubeadm join 192.168.2.129:6443 --token abcdef.0123456789abcdef \
+        --discovery-token-ca-cert-hash sha256:3bd6a1a3f7a31701741854b919593d2e0008bf765ad4b4d23c91ded64e1d4f8c
+		
+		
+kubeadm token generate
+kubeadm token create eklali.l9225oeah22qhix6 --print-join-command --ttl=0
+
+
+################################ control node at user ############################################
+  
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+################################ control node at root ############################################
+cat <<EOF | tee -a ~/.bashrc
+export KUBECONFIG=/etc/kubernetes/admin.conf
+EOF
+
+############################## CIDR Calico ##############################################
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+kubectl apply -f https://docs.projectcalico.org/v3.20/manifests/calico.yaml
+
+
+
+############################################################################
+
+kubectl get pods --all-namespaces
+kubectl get nodes -o wide
+
+#########################	Debian/Ubuntu HAProxy packages	####################################
+
+curl https://haproxy.debian.net/bernat.debian.org.gpg \
+      | gpg --dearmor > /usr/share/keyrings/haproxy.debian.net.gpg
+echo deb "[signed-by=/usr/share/keyrings/haproxy.debian.net.gpg]" \
+      http://haproxy.debian.net bullseye-backports-2.4 main \
+      > /etc/apt/sources.list.d/haproxy.list
+
+apt-get update && apt-get install -y haproxy=2.4.\*
+
+IPLOCAL=hostname -i
+
+cat <<EOF | tee -a /etc/haproxy/haproxy.cfg
+frontend k8s-api
+	bind 10.40.254.135:6443
+	bind 127.0.0.1:6443
+	mode tcp
+	option tcplog
+	default_backend k8s-api
+
+backend k8s-api
+	mode tcp
+	option tcplog
+	option tcp-check
+	balance roundrobin
+	default-server port 6443 inter 10s downinter 5s rise 2 fall 2 slowstart 60s maxconn 250 maxqueue 256 weight 100
+        server apiserver1 10.40.254.133:6443 check
+        server apiserver2 10.40.254.140:6443 check
+        server apiserver3 10.40.254.149:6443 check
+EOF
+
+systemctl restart haproxy.service
+
+netstat -alpn | grep 6443
+
+nano  /etc/kubernetes/kubelet.conf
+# nano /etc/kubernetes/bootstrap-kubelet.conf
+# replace
+server: https://127.0.0.1:6443
+
+systemctl restart kubelet && systemctl restart docker
+
+
+#########################	Установка панели управления Kubernetes Dashboard	####################################
+https://github.com/kubernetes/dashboard
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.4.0/aio/deploy/recommended.yaml
+kubectl get pods --all-namespaces -o wide | grep  kubernetes-dashboard
+
+cat <<EOF | tee ~/dashboard-adminuser.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+EOF
+kubectl apply -f dashboard-adminuser.yaml
+kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
+-NodePort
+KUBE_EDITOR="nano" kubectl -n kubernetes-dashboard edit service kubernetes-dashboard
+  ports:
+  - nodePort: 30000
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+
+  type: NodePort
+
+
+You should see yaml representation of the service. Change type: ClusterIP to type: NodePort and save file
+		###################################коррекция таймаута для WEB##########################################################
+		kubectl edit deployment kubernetes-dashboard -n kubernetes-dashboard
+			extraArgs:
+				- --token-ttl=86400
+
+
+eyJhbGciOiJSUzI1NiIsImtpZCI6ImNNQlA2Q1VYWkVMOUhMdHdSaVVsajE0b0tCR0hzSEhUc1NNeDBOa0M0WEEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLThxd3B6Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJjZGFjYTAxNi0yMTAyLTQxNDktYTY3NS1iMDM3NzdlOGNkOTIiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.EJCamTRsNugG70lbmsUTMD26eBcKhAWAwUSN51WNdAMX0yJCufTON_2LtpvpOR7S2L1dhiCp9NtSt7FfesEU4BCwVSPDkD8Hq7T7zEdvfMrj-U9UVA9BvmvyqjtQ6wD9CI8zAeL-AGA2Ym09E0QHVd2pCGVNWlNktMbLQe6LB_ZbO8KXJQ_lJ83B5tP06hIwCWnc68v7GT3SWSeu1-MpVQPJBI1Vp_JImhCfdClf1LT11COQuR2n6rDhXfSjGd2hBobPOrxuSwv_QnHz-f5x1PTSqioMW5GNo0UcRef5cHEVx6GBBBvPBZmwK42xiB_5oAPhF-aDvec4S3uY3iEJUA
+################################ Metric Server ###############################################################
+- Kubernetes metrics-server Error – Readiness probe failed: HTTP probe failed with statuscode
+Solution:
+- Download https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+- Modify and add "- --kubelet-insecure-tls" in deployment.spec.template.spec.containers.args
+- kubectl apply -f components.yaml
+- kubectl top nodes
+- kubectl top  pod kube-proxy-5p7gr -n=kube-system
+
+#########################	Установка Ingress контроллера	####################################
+
+
+#########################	Remove worker node from Kubernetes	####################################
+
+kubectl get nodes
+kubectl cordon < node-name >
+kubectl drain < node-name > --ignore-daemonsets
+kubectl delete node < node-name >
+
+On Worker Node (nodetoberemoved). Remove join/init setting from node
+kubeadm reset
+
+############################### перевод ноды на Containerd #############################################
+
+systemctl stop kubelet && systemctl stop docker
+apt-get update && apt-get -y remove docker-ce docker-ce-cli
+nano /etc/containerd/config.toml
+containerd config default > /etc/containerd/config.toml
+systemctl restart containerd
+
+echo '--resolv-conf=/run/systemd/resolve/resolv.conf --container-runtime=remote --container-runtime-endpoint=unix:///run/containerd/containerd.sock"' >> /var/lib/kubelet/kubeadm-flags.env
+nano /var/lib/kubelet/kubeadm-flags.env
+
+systemctl start kubelet
+
+############################################################################
+Environment="KUBELET_EXTRA_ARGS=--runtime-cgroups=/system.slice/containerd.service --container-runtime=remote --runtime-request-timeout=15m --container-runtime-endpoint=unix:///run/containerd/containerd.sock"
+
+################################# NGINKS + Keepallive  ###########################################
+
+apt install keepalived
+
+curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor \
+    | tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+gpg --dry-run --quiet --import --import-options import-show /usr/share/keyrings/nginx-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+http://nginx.org/packages/debian `lsb_release -cs` nginx" \
+    | tee /etc/apt/sources.list.d/nginx.list
+
+apt install nginx
+
+
+###################################### Автодополнение KUBECTL ############################################################
+apt-get install bash-completion
+
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+
+###################################### TSHOT ##################################################################
+kubectl get events --sort-by=.metadata.creationTimestamp -n kube-system
+
+##############################  How to use the master node as worker node in Kubernetes cluster?  #############################################
+By default, your cluster will not schedule pods on the master for security reasons. 
+If you want to be able to schedule pods on the master, e.g. for a single-machine Kubernetes cluster for development, run:
+```
+kubectl get nodes
+
+NAME     STATUS   ROLES    AGE   VERSION
+yasin   Ready    master   11d   v1.13.4
+```
+kubectl taint nodes debian node-role.kubernetes.io/master-
+
+

@@ -1,0 +1,119 @@
+################################## Установка Docker ##########################################
+proxy
+apt-get update
+apt-get install apt-transport-https ca-certificates curl gnupg lsb-release
+curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt-get update
+apt-get install docker-ce docker-ce-cli containerd.io
+
+usermod -aG docker $USER
+cat <<EOF | tee /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+
+cat /etc/docker/daemon.json
+mkdir -p /etc/systemd/system/docker.service.d
+systemctl daemon-reload
+systemctl enable docker
+systemctl restart docker
+
+
+###############################  HTTP/HTTPS proxy #############################################
+
+
+mkdir -p /etc/systemd/system/docker.service.d
+nano /etc/systemd/system/docker.service.d/http-proxy.conf
+
+[Service]
+Environment="HTTP_PROXY=http://10.47.240.250:9999"
+Environment="HTTPS_PROXY=http://10.47.240.250:9999"
+Environment="NO_PROXY=localhost,127.0.0.1,10.0.0.0/8,10.96.0.0/12,192.168.0.0/16,*.mts.ru"
+
+systemctl daemon-reload && systemctl restart docker
+systemctl show --property=Environment docker
+ 
+################################  Manage Docker as a non-root user ############################################
+ 
+ groupadd docker
+ usermod -aG docker $USER
+ 
+ Log out and log back in so that your group membership is re-evaluated.
+ 
+#########################	Container runtimes	####################################
+# Install and configure prerequisites
+cat <<EOF | tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
+EOF
+
+modprobe overlay
+modprobe br_netfilter
+
+# Setup required sysctl params, these persist across reboots.
+cat <<EOF | tee /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+
+sysctl --system
+mkdir -p /etc/containerd
+containerd config default | tee /etc/containerd/config.toml
+systemctl restart containerd
+
+################################## RUNCHER ###################################################
+
+docker run -d --restart=unless-stopped \
+  -p 80:80 -p 443:443 \
+  -v /opt/rancher:/var/lib/rancher \
+  --privileged \
+  rancher/rancher:latest
+
+def6ff4386c6
+
+
+
+
+iptables-save > ~/iptables.up.rules
+
+update-alternatives --set iptables /usr/sbin/iptables-nft
+update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+update-alternatives --set arptables /usr/sbin/arptables-nft
+update-alternatives --set ebtables /usr/sbin/ebtables-nft
+
+update-alternatives --set iptables /usr/sbin/iptables-legacy
+update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+update-alternatives --set arptables /usr/sbin/arptables-legacy
+update-alternatives --set ebtables /usr/sbin/ebtables-legacy
+
+iptables-save > /etc/iptables.up.rules
+
+####################################### HELM ##########################################################
+
+curl https://baltocdn.com/helm/signing.asc | apt-key add -
+echo "deb https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
+apt-get update && apt-get install helm
+
+helm search hub rancher --max-col-width 80
+
+
+########################################################################################################
+##############################  cert-manager Installation  #############################################
+########################################################################################################
+VERSION=1.6.1
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v${VERSION}/cert-manager.yaml
+- Uninstalling with regular manifests
+kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v${VERSION}/cert-manager.yaml
