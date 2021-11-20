@@ -64,3 +64,37 @@ bridge_maxwait 0
 ```
  sudo systemctl restart networking
 ```
+# Proxy
+```
+cat <<EOF | tee -a ~/.bashrc 
+function proxy(){
+   echo -n "username:"
+   read -e username
+   echo -n "password:"
+   read -es password
+   #password=`echo $password |sed -e 's/%/%25/g'|sed -e 's/\@/%40/g'|sed -e 's/\//%2F/g'|sed -e 's/\:/%3A/g'|sed -e 's/\\$/%24/g'|sed -e s/#/%23/g|sed -e s/!/%21/g`
+   export http_proxy="http://$username:$password@bproxy.ug.mts.ru:3131/"
+   #export http_proxy_auth="basic:*:$username:$password"
+   #export http_proxy="http://bproxy.ug.mts.ru:3131"
+   export https_proxy=$http_proxy
+   export ftp_proxy=$http_proxy
+   export rsync_proxy=$http_proxy
+   export no_proxy="localhost,127.0.0.1,localaddress,.localdomain.com"
+   echo -e "\nProxy environment variable set."
+   }
+   function proxyoff(){
+   unset HTTP_PROXY
+   unset http_proxy
+   unset HTTPS_PROXY
+   unset https_proxy
+   unset FTP_PROXY
+   unset ftp_proxy
+   unset RSYNC_PROXY
+   unset rsync_proxy
+   unset proxy
+   unset proxy_username
+   unset proxy_password
+   echo -e "\nProxy environment variable removed."
+   }
+EOF
+```
