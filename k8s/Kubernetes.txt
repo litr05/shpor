@@ -260,8 +260,7 @@ KUBE_EDITOR="nano" kubectl edit deployment kubernetes-dashboard -n kubernetes-da
 				- --token-ttl=86400
 
 
-eyJhbGciOiJSUzI1NiIsImtpZCI6IjJJXzZhRHY1NVY0NDYtSlFCQkxHWnNEdkxYSDJBUFEydF84OHdXWVlVVm8ifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLXY0cWhxIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiIxMTJmNTQ5MC1jZmVlLTQzYjMtYWE4MS0wOTg0ZjZlMGYxYzkiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.eMIehsRSCejVqDNg0KbNhihhkG38cBwX90RbPQAyvjcMsL692TxsVyA9N760vtoNROvSCelTnnJscsmrpojaS3xbRbyzyv4ijdBb_sZqjTtWfb_yCyj4-soMBgR27zxKAL6yDlHohmmSl7Z0w-Yf_62R0q1_mAaj3AxdLC4HS9rJ1OU3HiAy6UDUlmEnjKaCdvVZcB3MxbXyBCHvllx8GWCCgE4RkGcHiaHQj9i0zLagmtgDeb2qqAcTcf9pGE5flUijYSP5SBJNGAm0TTtUeHy1SeMv1LkDJz7JwlkXP8B2Wbr4Kio_IWPFkyYduEYikmg1wPY_q5v2WDG2BYbjDQ
-
+eyJhbGciOiJSUzI1NiIsImtpZCI6ImNNQlA2Q1VYWkVMOUhMdHdSaVVsajE0b0tCR0hzSEhUc1NNeDBOa0M0WEEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLThxd3B6Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJjZGFjYTAxNi0yMTAyLTQxNDktYTY3NS1iMDM3NzdlOGNkOTIiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.EJCamTRsNugG70lbmsUTMD26eBcKhAWAwUSN51WNdAMX0yJCufTON_2LtpvpOR7S2L1dhiCp9NtSt7FfesEU4BCwVSPDkD8Hq7T7zEdvfMrj-U9UVA9BvmvyqjtQ6wD9CI8zAeL-AGA2Ym09E0QHVd2pCGVNWlNktMbLQe6LB_ZbO8KXJQ_lJ83B5tP06hIwCWnc68v7GT3SWSeu1-MpVQPJBI1Vp_JImhCfdClf1LT11COQuR2n6rDhXfSjGd2hBobPOrxuSwv_QnHz-f5x1PTSqioMW5GNo0UcRef5cHEVx6GBBBvPBZmwK42xiB_5oAPhF-aDvec4S3uY3iEJUA
 ###############################################################################################
 - Kubernetes metrics-server Error – Readiness probe failed: HTTP probe failed with statuscode
 Solution:
@@ -328,6 +327,8 @@ echo "source <(kubectl completion bash)" >> ~/.bashrc
 
 ###################################### TSHOT ##################################################################
 kubectl get events --sort-by=.metadata.creationTimestamp -n kube-system
+
+kubectl run -it --rm --restart=Never --image=infoblox/dnstools:latest dnstools
 
 ##############################  How to use the master node as worker node in Kubernetes cluster?  #############################################
 By default, your cluster will not schedule pods on the master for security reasons. 
