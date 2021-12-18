@@ -272,7 +272,13 @@ wget https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/
 - kubectl top  pod kube-proxy-5p7gr -n=kube-system
 
 #########################	Установка Ingress контроллера	####################################
-
+- my-ingress-controller.yaml - Деплой ingress controller в режиме NodePort на помеченные при помощи специальных lables поды.
+```
+kubectl label nodes node2 ingress-nginx-node=enable 
+```
+git clone https://github.com/litr05/shpor.git
+cd shpor/k8s/
+kubectl apply -f ingress_deploy.yaml
 
 #########################	Remove worker node from Kubernetes	####################################
 
