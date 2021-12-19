@@ -11,10 +11,10 @@ metadata:
 spec:
   tls:
   - hosts:
-      - "node1"
+      - "app"
     secretName: kubernetes-dashboard-secret
   rules:
-  - host: "node1"
+  - host: "app"
     http:
       paths:
       - path: /dashboard(/|$)(.*)
