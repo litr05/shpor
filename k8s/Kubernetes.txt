@@ -139,12 +139,11 @@ kubeadm join 10.40.254.151:16443 --token abcdef.0123456789abcdef \
         --discovery-token-ca-cert-hash sha256:00ee7fd8bb24a18d71c23aacc5b132539c2a4d0985128b84ae33dd8ff889e6dd \
         --control-plane
 
-kubeadm join 10.40.254.151:16443 --token abcdef.0123456789abcdef \
-        --discovery-token-ca-cert-hash sha256:00ee7fd8bb24a18d71c23aacc5b132539c2a4d0985128b84ae33dd8ff889e6dd
+kubeadm join 192.168.2.129:6443 --token 6encpg.vhxllb5gityixefw --discovery-token-ca-cert-hash sha256:3bd6a1a3f7a31701741854b919593d2e0008bf765ad4b4d23c91ded64e1d4f8c
 	
 		
 kubeadm token generate
-kubeadm token create 5bbqk1.d73y0kcjb7153npa --print-join-command --ttl=0
+kubeadm token create 6encpg.vhxllb5gityixefw --print-join-command --ttl=0
 
 
 
@@ -348,3 +347,26 @@ yasin   Ready    master   11d   v1.13.4
 kubectl taint nodes debian node-role.kubernetes.io/master-
 
 
+#######################  Upgrade KUBERNETES ######################
+
+apt-mark unhold kubeadm && \
+apt-get update && apt-get install -y kubeadm=1.23.1-00 && \
+apt-mark hold kubeadm
+
+kubeadm version
+kubeadm upgrade plan
+sudo kubeadm upgrade apply v1.23.1
+kubectl drain master1
+
+apt-mark unhold kubelet kubectl && \
+apt-get update && apt-get install -y kubelet=1.23.1-00 kubectl=1.23.1-00 && \
+apt-mark hold kubelet kubectl
+
+systemctl daemon-reload && \
+systemctl restart kubelet
+kubectl uncordon master1
+
+####### SWAP ON KUBELET   ###################
+echo 'Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"' >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+systemctl daemon-reload && systemctl restart kubelet
