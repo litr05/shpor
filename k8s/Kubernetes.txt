@@ -370,3 +370,23 @@ kubectl uncordon master1
 echo 'Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"' >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 systemctl daemon-reload && systemctl restart kubelet
+
+#####################  CERT MANAGER ##############################
+
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.yaml
+
+curl -L -o cmctl.tar.gz https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cmctl-linux-amd64.tar.gz
+
+tar xzf cmctl.tar.gz
+mv cmctl /usr/local/bin
+
+kubectl -n kubernetes-dashboard create secret tls kube-ca-secret \
+--cert=/etc/kubernetes/pki/ca.crt \
+--key=/etc/kubernetes/pki/ca.key
+
+root@master1:~# kubectl apply -f cert.yaml
+issuer.cert-manager.io/monitoring-issuer created
+certificate.cert-manager.io/mon-certificate created
+
+kubectl -n kubernetes-dashboard get issuers
+kubectl -n kubernetes-dashboard get certificate
