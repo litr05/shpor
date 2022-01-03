@@ -119,7 +119,7 @@ imageRepository: k8s.gcr.io
 kind: ClusterConfiguration
 kubernetesVersion: 1.22.3
 networking:
-  dnsDomain: domail.local
+  dnsDomain: domain.local
   serviceSubnet: 10.96.0.0/12
   podSubnet: 192.168.0.0/16
 scheduler: {}
