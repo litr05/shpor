@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-nfs
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 1Gi
+  nfs:
+    path: /mnt/shared
+    server: 192.168.2.133
+  persistentVolumeReclaimPolicy: Retain
+

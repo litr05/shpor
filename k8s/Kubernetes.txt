@@ -68,11 +68,19 @@ systemctl daemon-reload && systemctl restart etcd
 etcdctl -w table member list
 curl -sL http://10.40.254.133:2379/metrics | grep etcd_server_is_leader
 
-ENDPOINTS=10.40.254.133:2379,10.40.254.140:2379,10.40.254.149:2379
+ENDPOINTS=10.40.1.129:2379,10.40.1.140:2379,10.40.1.149:2379
 ENDPOINTS=192.168.2.11:2379
+
+ENDPOINTS=10.40.1.129:2379
+ETCDCTL_DIAL_TIMEOUT=3s
+ETCDCTL_CACERT=/tmp/ca.pem
+ETCDCTL_CERT=/tmp/cert.pem
+ETCDCTL_KEY=/tmp/key.pem
+
+
 etcdctl --endpoints=$ENDPOINTS member list
 etcdctl --write-out=table --endpoints=$ENDPOINTS endpoint status
-etcdctl --write-out=table --endpoints=192.168.2.132:2379 endpoint status
+etcdctl --write-out=table --endpoints=10.40.1.129:2379 endpoint status
 etcdctl --endpoints=$ENDPOINTS endpoint health
 
 etcdctl move-leader 7a34f6bf27d4be0b
@@ -230,7 +238,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: admin-user
-  namespace: kubernetes-dashboard
+  namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -243,12 +251,24 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: admin-user
-  namespace: kubernetes-dashboard
+  namespace: kube-system
 EOF
+
+kubectl create deployment nginx --image=nginx
+POD_NAME=$(kubectl get pods -l app=nginx -o jsonpath="{.items[0].metadata.name}")
+kubectl port-forward $POD_NAME 8080:80
+kubectl logs $POD_NAME
+kubectl exec -ti $POD_NAME -- nginx -v
+
+kubectl expose deployment nginx --port 80 --type NodePort
+kubectl expose deployment nginx --port 80 --type ClusterIP -n dev
+
+
 kubectl apply -f dashboard-adminuser.yaml
 kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
+kubectl -n kube-system get secret $(kubectl -n kube-system get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
 -NodePort
-KUBE_EDITOR="nano" kubectl -n kubernetes-dashboard edit service kubernetes-dashboard
+KUBE_EDITOR="nano" kubectl -n kube-system edit service kubernetes-dashboard
   ports:
   - nodePort: 30000
     port: 443
@@ -258,6 +278,7 @@ KUBE_EDITOR="nano" kubectl -n kubernetes-dashboard edit service kubernetes-dashb
   type: NodePort
 
 
+
 You should see yaml representation of the service. Change type: ClusterIP to type: NodePort and save file
 ###################################коррекция таймаута для WEB##########################################################
 KUBE_EDITOR="nano" kubectl edit deployment kubernetes-dashboard -n kubernetes-dashboard
@@ -265,9 +286,10 @@ KUBE_EDITOR="nano" kubectl edit deployment kubernetes-dashboard -n kubernetes-da
 				- --token-ttl=86400
 
 
-eyJhbGciOiJSUzI1NiIsImtpZCI6ImNNQlA2Q1VYWkVMOUhMdHdSaVVsajE0b0tCR0hzSEhUc1NNeDBOa0M0WEEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLThxd3B6Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJjZGFjYTAxNi0yMTAyLTQxNDktYTY3NS1iMDM3NzdlOGNkOTIiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.EJCamTRsNugG70lbmsUTMD26eBcKhAWAwUSN51WNdAMX0yJCufTON_2LtpvpOR7S2L1dhiCp9NtSt7FfesEU4BCwVSPDkD8Hq7T7zEdvfMrj-U9UVA9BvmvyqjtQ6wD9CI8zAeL-AGA2Ym09E0QHVd2pCGVNWlNktMbLQe6LB_ZbO8KXJQ_lJ83B5tP06hIwCWnc68v7GT3SWSeu1-MpVQPJBI1Vp_JImhCfdClf1LT11COQuR2n6rDhXfSjGd2hBobPOrxuSwv_QnHz-f5x1PTSqioMW5GNo0UcRef5cHEVx6GBBBvPBZmwK42xiB_5oAPhF-aDvec4S3uY3iEJUA
-###############################################################################################
+eyJhbGciOiJSUzI1NiIsImtpZCI6IkNrVGFYMlNSaW1yLXUyTjN5b0h0ZE5xMkpzZzBVOEIzeUxHVFgyaW5FelEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLWdyeHRoIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI5NWZiYWE5Yy1jN2IwLTQ0ZWQtOTZlYS03YTUxYTM0OGQ3YTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZS1zeXN0ZW06YWRtaW4tdXNlciJ9.a0FYykbdpODEp0uSg2ueNVehu0yrqXiVyv6_NgeQ5VSdVkbz85mX8e9HJs5-0QhPfALWrbnDBOB6CuYl4VYwtWIBAnwwW2Q6w0BVC6Gi3OpUWqMMnINoPvyOjGqTldEvumUSRiG9oTSPa9lXx30_-u2bW1SI6MArey5LRk0-VSM7yFDycqPFyJCkhVuI40d4IlpGQjkzORnvDi_j7OHxSC1hoE0-1Yd7WWmLi7255EipO67SaPVBVqUCib3MjmgHsIBW8rhKMxiBnE5fICzs3Bw66OhHjzlY3FeRy4sMxOrlld4sDy1ZfnLEY5-hdBIZaX7Bm2BSTwrf16g4TBfGuA
+
 - Kubernetes metrics-server Error – Readiness probe failed: HTTP probe failed with statuscode
+
 Solution:
 - Download 
 wget https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
@@ -376,6 +398,14 @@ kubectl uncordon master1
 echo 'Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"' >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 systemctl daemon-reload && systemctl restart kubelet
+
+Если развернуто с помощью kubespray
+ nano /etc/kubernetes/kubelet-config.yaml
+ failSwapOn: false
+reboot
+
+Debian SWAP config
+/dev/mapper/debian--vg-swap none            swap    sw              0       0
 
 #####################  CERT MANAGER ##############################
 

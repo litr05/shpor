@@ -1,0 +1,42 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: dashboard-issuer
+  namespace: kubernetes-dashboard
+spec:
+  ca:
+    secretName: kube-ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dashboard-certificate
+  namespace: kubernetes-dashboard
+spec:
+  secretName: mon-tls
+  duration: 43800h # 5y
+  renewBefore: 360h # 15d
+  commonName: app.domain.local	
+  isCA: false
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+    rotationPolicy: Always
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - app.domain.local
+  - ingress.local
+  ipAddresses:
+  - 192.168.2.150
+  issuerRef:
+    name: dashboard-issuer
+    # We can reference ClusterIssuers by changing the kind here.
+    # The default value is Issuer (i.e. a locally namespaced Issuer)
+    kind: Issuer
+    # This is optional since cert-manager will default to this value however
+    # if you are using an external issuer, change this to that issuer group.
+    group: cert-manager.io
