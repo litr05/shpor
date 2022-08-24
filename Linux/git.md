@@ -6,7 +6,7 @@
 
 - 2. Enter ```ls -al ~/.ssh``` to see if existing SSH keys are present.
 ```bash
-	$ ls -al ~/.ssh
+	$ 																																																																						
 ```
 	Lists the files in your .ssh directory, if they exist
 	
@@ -35,7 +35,7 @@ $ ssh-keygen -t rsa -b 4096 -C "litrovkin@yandex.ru"
 - 1. Ensure the ssh-agent is running. You can use the "Auto-launching the ssh-agent" instructions in "Working with SSH key passphrases", or start it manually:
 ```
 # start the ssh-agent in the background
-$ eval "$(ssh-agent -s)"
+$ 	
 > Agent pid 59566
 ```
 - 2. Add your SSH private key to the ssh-agent. If you created your key with a different name, or if you are adding an existing key that has a different name, replace id_ed25519 in the command with the name of your private key file.
@@ -94,7 +94,7 @@ git push -u origin master
 ```
 ## …or push an existing repository from the command line
 ```
-git remote add origin git@github.com:litr05/litr05.git
+git remote add origin git@github.com:litr05/ansible.git
 git branch -M master
 git push -u origin master
 ```
