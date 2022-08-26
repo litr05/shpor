@@ -1,8 +1,0 @@
-# namespace для тестов
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kubetest
-  labels:
-    app: kubetest
