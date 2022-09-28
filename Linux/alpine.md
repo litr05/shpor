@@ -49,7 +49,6 @@ podman system migrate
 # Open unprivileged_port
 ```
 cat <<EOF | tee -a /etc/sysctl.conf
-	net.ipv4.ip_unprivileged_port_start=443
 	net.ipv4.ip_unprivileged_port_start=80
 EOF
 ```
@@ -69,8 +68,8 @@ podman run --name=nexus_nexus_1 -d --label io.podman.compose.config-hash=123 --l
 && podman run --name=nexus_nginx_1 -d --label io.podman.compose.config-hash=123 --label io.podman.compose.project=nexus --label io.podman.compose.version=0.0.1 --label com.docker.compose.project=nexus --label com.docker.compose.project.working_dir=/home/litr/nexus --label com.docker.compose.project.config_files=docker-compose.yml --label com.docker.compose.container-number=1 --label com.docker.compose.service=nginx --net nexus_default --network-alias nginx -p 80:80 -p 443:443 -p 6666:6666 -p 7777:7777 nginx-nexus nginx -g daemon off;
 
 
-podman pod create --name nexus -p 80:80 -p 443:443 -p 6666:6666 -p 7777:7777 --network podman \
-&& podman run --pod nexus --name=nexus_nexus_1 -d -v /nexus-data:/opt/nexus-data docker.io/sonatype/nexus3:3.41.1 \
+podman pod create --name nexus -p 80:80 -p 443:443 -p 6666:6666 -p 7777:7777 \
+&& podman run --pod nexus --name=nexus_nexus_1 -d -v /opt/nexus-data:/nexus-data docker.io/sonatype/nexus3:3.41.1 \
 && podman run --pod nexus --name=nexus_nginx_1 -d nginx-nexus
 
 
