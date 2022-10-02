@@ -11,8 +11,14 @@ rc-service sshd restart
 ```
 cp /etc/profile.d/color_prompt.sh.disabled /etc/profile.d/color_prompt.sh
 ```
-
-
+# Network static
+```
+vi /etc/network/interfaces
+iface eth0 inet static
+        address 10.40.1.130
+        netmask 255.255.255.0
+        gateway 10.40.1.2
+```
 ### Add External disk nexus-data
 ```
 pvcreate /dev/sdb
@@ -94,8 +100,10 @@ podman stop -t 10 nexus_nginx_1 > /dev/null && podman stop -t 10 nexus_nexus_1 >
 && podman rm nexus_nginx_1 > /dev/null && podman rm nexus_nexus_1 > /dev/null \
 && podman pod stop nexus > /dev/null && podman pod rm nexus > /dev/null
 ```
-
+# Add init.d service for nexus
 ```
+cp /etc/init.d/hostname /etc/init.d/nexus
+cat <<EOF | tee /etc/init.d/nexus
 #!/sbin/openrc-run
 
 description="Set Nexus Repository."
@@ -119,5 +127,5 @@ stop() {
         && podman pod stop nexus > /dev/null && podman pod rm nexus > /dev/null
         eend $?
 }
-
+EOF
 ```
