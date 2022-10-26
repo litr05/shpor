@@ -186,5 +186,9 @@ which etcd
 du . --max-depth=1 -ah | sort -rh | head -10
 ```
 
-
-
+# Уменьшение VM диска после удаления файлов. Забить нулями файл, и удалить его. VMware сделать процедуру defrag and compact.
+- Перейдите в корневую папку вашего диска и запустите эту команду:
+```
+for i in $(seq 1 //DISKSPACE//); do dd if=/dev/zero of=emptyfile${i} bs=1024 count=1048576; done; rm emptyfile*;
+```
+где // DISKSPACE// - это размер вашего жесткого диска в ГБ.
