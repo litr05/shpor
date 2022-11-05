@@ -22,6 +22,12 @@ systemctl restart systemd-networkd
 
 download_container: false 
 
+# UPDATE FLATCAR
+```
+curl -sSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt | grep FLATCAR_VERSION
+cat /etc/os-release | grep VERSION
+```
+
 # gcr and kubernetes image repo define
 gcr_image_repo: "gcr.io"
 kube_image_repo: "registry.k8s.io"
