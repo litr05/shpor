@@ -27,6 +27,10 @@ download_container: false
 curl -sSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt | grep FLATCAR_VERSION
 cat /etc/os-release | grep VERSION
 ```
+```
+update_engine_client -update
+systemctl reboot
+```
 
 # gcr and kubernetes image repo define
 gcr_image_repo: "gcr.io"
