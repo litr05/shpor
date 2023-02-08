@@ -46,3 +46,11 @@ sed \
 -e 's/security.debian.org/ansible\/repository\/apt-deb/g' \
 sources.list.save > sources.list
 ```
+## Заменить repo Ubuntu на nexus ИТ
+```
+cd /etc/apt/
+sed \
+-e 's/ru.archive.ubuntu.com\/ubuntu/nexus.services.mts.ru\/repository\/ubuntu-jammy/g' \
+-e 's/security.ubuntu.com\/ubuntu/nexus.services.mts.ru\/repository\/ubuntu-jammy/g' \
+sources.list.save > sources.list
+```
